@@ -195,7 +195,7 @@ if($PSDependAction -contains 'Install')
         $NugetParams += '-version', $Version
     }
     $NugetParams = 'install', $Name + $NugetParams
-    Invoke-ExternalCommand nuget.exe -Arguments $NugetParams
+    Invoke-ExternalCommand nuget.exe -Arguments $NugetParams -FailOnError
 }
 
 # Conditional import

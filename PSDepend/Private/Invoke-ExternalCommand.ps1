@@ -2,14 +2,23 @@
 # Borrowed idea from https://github.com/pester/Pester/issues/415
 function Invoke-ExternalCommand {
     [cmdletbinding()]
-    param($Command, [string[]]$Arguments, [switch]$Passthru)
+    param($Command, [string[]]$Arguments, [switch]$Passthru, [switch]$FailOnError)
 
     Write-Verbose "Running $Command with arguments $($Arguments -join "; ")"
     $result = $null
     $result = & $command @arguments  
-    Write-Verbose "$($result | Out-String)"
-    if($Passthru)
+    
+    $successFlag = $?
+    if ($successFlag) 
     {
-        $Result
+        Write-Verbose "$($result | Out-String)"
+        if($Passthru)
+        {
+            $Result
+        }
+    }
+    else 
+    {
+        throw "$($result | Out-String)"
     }
 }
