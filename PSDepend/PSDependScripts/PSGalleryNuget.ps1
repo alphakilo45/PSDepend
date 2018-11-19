@@ -14,6 +14,7 @@
             Target: Required path to save this module.  No Default
                 Example: To install PSDeploy to C:\temp\PSDeploy, I would specify C:\temp
             AddToPath: Prepend the Target to ENV:PSModulePath
+            Credential: The API key (username) and access token (password) used to authenticate with the nuget repository's API
 
     .PARAMETER Force
         If specified and Target already exists, remove existing item before saving
@@ -93,6 +94,8 @@ param(
         return
     }
 
+    $Credential = $Dependency.Credential
+
 if(-not (Get-Command Nuget.exe -ErrorAction SilentlyContinue))
 {
     Write-Error "PSGalleryNuget requires Nuget.exe.  Ensure this is in your path, or explicitly specified in $ModuleRoot\PSDepend.Config's NugetPath.  Skipping [$DependencyName]"
@@ -120,7 +123,7 @@ if(Test-Path $ModulePath)
     # Thanks to Brandon Padgett!
     $ManifestData = Import-LocalizedData -BaseDirectory $ModulePath -FileName "$Name.psd1"
     $ExistingVersion = $ManifestData.ModuleVersion
-    $GetGalleryVersion = { ( Find-NugetPackage -Name $Name -PackageSourceUrl $Source -IsLatest ).Version }
+    $GetGalleryVersion = { ( Find-NugetPackage -Name $Name -PackageSourceUrl $Source -Credential $Credential -IsLatest ).Version }
     
     # Version string, and equal to current
     if( $Version -and $Version -ne 'latest' -and $Version -eq $ExistingVersion)

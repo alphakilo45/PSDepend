@@ -10,6 +10,7 @@
             Version: Used to identify existing installs meeting this criteria, and as RequiredVersion for installation.  Defaults to 'latest'
             Target: Used as 'Scope' for Install-Module.  If this is a path, we use Save-Module with this path.  Defaults to 'AllUsers'
             AddToPath: If target is used as a path, prepend that path to ENV:PSModulePath
+            Credential: The username and password used to authenticate with a private repository
 
         If you don't have the Nuget package provider, we install it for you
 
@@ -111,6 +112,8 @@ param(
         $Scope = $Dependency.Target
     }
 
+    $Credential = $Dependency.Credential
+
     if('AllUsers', 'CurrentUser' -notcontains $Scope)
     {
         $command = 'save'
@@ -139,6 +142,10 @@ $params = @{
 if( $Version -and $Version -ne 'latest')
 {
     $Params.add('RequiredVersion',$Version)
+}
+if($Credential) 
+{
+    $Params.add('Credential', $Credential)
 }
 
 # This code works for both install and save scenarios.
@@ -174,9 +181,17 @@ $Existing = Get-Module -ListAvailable -Name $ModuleName -ErrorAction SilentlyCon
 if($Existing)
 {
     Write-Verbose "Found existing module [$Name]"
+    $findParams = @{
+        Name = $Name
+        Repository = $Repository
+    }
+    if ($Credential) {
+        $findParams.Add('Credential', $Credential)
+    }
+
     # Thanks to Brandon Padgett!
     $ExistingVersion = $Existing | Measure-Object -Property Version -Maximum | Select-Object -ExpandProperty Maximum
-    $GetGalleryVersion = { Find-Module -Name $Name -Repository $Repository | Measure-Object -Property Version -Maximum | Select-Object -ExpandProperty Maximum }
+    $GetGalleryVersion = { Find-Module @findParams | Measure-Object -Property Version -Maximum | Select-Object -ExpandProperty Maximum }
 
     # Version string, and equal to current
     if( $Version -and $Version -ne 'latest' -and $Version -eq $ExistingVersion)
@@ -222,7 +237,7 @@ if($PSDependAction -contains 'Install')
     if('AllUsers', 'CurrentUser' -contains $Scope)
     {
         Write-Verbose "Installing [$Name] with scope [$Scope]"
-        Install-Module @params -Scope $Scope
+        Install-Module @Params -Scope $Scope
     }
     else
     {
@@ -232,7 +247,7 @@ if($PSDependAction -contains 'Install')
         {
             $Null = New-Item -ItemType Directory -Path $Scope -Force -ErrorAction SilentlyContinue
         }
-        Save-Module @params -Path $Scope
+        Save-Module @Params -Path $Scope
     }
 }
 

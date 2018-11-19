@@ -62,6 +62,9 @@ Function Invoke-PSDepend {
     .PARAMETER Import 
         If the dependency supports it, import it
 
+    .PARAMETER Credentials
+        Provides a hash of named credentials to be used with any dependency types that support credentials
+
     .EXAMPLE
         Invoke-PSDepend
 
@@ -144,7 +147,9 @@ Function Invoke-PSDepend {
 
         [switch]$Force,
 
-        [String]$Target
+        [String]$Target,
+
+        [Hashtable]$Credentials
     )
     Begin
     {
@@ -198,6 +203,11 @@ Function Invoke-PSDepend {
         if($PSBoundParameters.ContainsKey('Tags'))
         {
             $GetPSDependParams.Add('Tags',$Tags)
+        }
+
+        if($PSBoundParameters.ContainsKey('Credentials')) 
+        {
+            $GetPSDependParams.Add('Credentials', $Credentials)    
         }
 
         # Handle Dependencies

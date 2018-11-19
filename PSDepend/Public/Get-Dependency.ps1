@@ -142,9 +142,24 @@ function Get-Dependency {
         [switch]$Recurse,
 
         [parameter(ParameterSetName='Hashtable')]
-        [hashtable[]]$InputObject
+        [hashtable[]]$InputObject,
 
+        [Hashtable]$Credentials
     )
+
+    # Helper to retrieve the credential for a dependency
+    function Resolve-Credential {
+        param (
+            $Name
+        )
+
+        $Credential = $null
+        if ($Name -and $Credentials -ne $null) {
+            $Credential = $Credentials[$Name]
+        }
+
+        $Credential
+    }
 
     # Helper to pick from global psdependoptions, or return a default
     function Get-GlobalOption {
@@ -238,13 +253,13 @@ function Get-Dependency {
             $DependencyHash = $Dependencies.$Dependency
             $DependencyType = Get-GlobalOption -Name DependencyType
 
-
             # Look simple syntax with helpers in the key first
             If( $DependencyHash -is [string] -and
                 $Dependency -match '::' -and
                 ($Dependency -split '::').count -eq 2
             )
             {
+                $CredentialName = Get-GlobalOption -Name Credential
                 [pscustomobject]@{
                     PSTypeName = 'PSDepend.Dependency'
                     DependencyFile = $DependencyFile
@@ -260,6 +275,7 @@ function Get-Dependency {
                     DependsOn = Get-GlobalOption -Name DependsOn
                     PreScripts =  Get-GlobalOption -Name PreScripts
                     PostScripts =  Get-GlobalOption -Name PostScripts
+                    Credential = Resolve-Credential -Name $CredentialName
                     PSDependOptions = $PSDependOptions
                     Raw = $null
                 }
@@ -271,6 +287,7 @@ function Get-Dependency {
                 -not $DependencyType -or
                 $DependencyType -eq 'PSGalleryModule')
             {
+                $CredentialName = Get-GlobalOption -Name Credential
                 [pscustomobject]@{
                     PSTypeName = 'PSDepend.Dependency'
                     DependencyFile = $DependencyFile
@@ -286,6 +303,7 @@ function Get-Dependency {
                     DependsOn = Get-GlobalOption -Name DependsOn
                     PreScripts =  Get-GlobalOption -Name PreScripts
                     PostScripts =  Get-GlobalOption -Name PostScripts
+                    Credential = Resolve-Credential -Name $CredentialName
                     PSDependOptions = $PSDependOptions
                     Raw = $null
                 }
@@ -297,6 +315,7 @@ function Get-Dependency {
                    -not $DependencyType -or
                    $DependencyType -eq 'GitHub')
             {
+                $CredentialName = Get-GlobalOption -Name Credential
                 [pscustomobject]@{
                     PSTypeName = 'PSDepend.Dependency'
                     DependencyFile = $DependencyFile
@@ -312,6 +331,7 @@ function Get-Dependency {
                     DependsOn = Get-GlobalOption -Name DependsOn
                     PreScripts = Get-GlobalOption -Name PreScripts
                     PostScripts = Get-GlobalOption -Name PostScripts
+                    Credential = Resolve-Credential -Name $CredentialName
                     PSDependOptions = $PSDependOptions
                     Raw = $null
                 }
@@ -322,6 +342,7 @@ function Get-Dependency {
                    -not $DependencyType -or
                    $DependencyType -eq 'Git' )
             {
+                $CredentialName = Get-GlobalOption -Name Credential
                 [pscustomobject]@{
                     PSTypeName = 'PSDepend.Dependency'
                     DependencyFile = $DependencyFile
@@ -337,6 +358,7 @@ function Get-Dependency {
                     DependsOn = Get-GlobalOption -Name DependsOn
                     PreScripts = Get-GlobalOption -Name PreScripts
                     PostScripts = Get-GlobalOption -Name PostScripts
+                    Credential = Resolve-Credential -Name $CredentialName
                     PSDependOptions = $PSDependOptions
                     Raw = $null
                 }
@@ -380,6 +402,7 @@ function Get-Dependency {
                     $DependencyType = $DependencyHash.DependencyType
                 }
 
+                $CredentialName = Get-GlobalOption -Name Credential -Prefer $DependencyHash.Credential
                 [pscustomobject]@{
                     PSTypeName = 'PSDepend.Dependency'
                     DependencyFile = $DependencyFile
@@ -395,6 +418,7 @@ function Get-Dependency {
                     DependsOn = Get-GlobalOption -Name DependsOn -Prefer $DependencyHash.DependsOn
                     PreScripts = Get-GlobalOption -Name PreScripts -Prefer $DependencyHash.PreScripts
                     PostScripts = Get-GlobalOption -Name PostScripts -Prefer $DependencyHash.PostScripts
+                    Credential = Resolve-Credential -Name $CredentialName
                     PSDependOptions = $PSDependOptions
                     Raw = $DependencyHash
                 }
