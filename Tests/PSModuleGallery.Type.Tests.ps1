@@ -16,10 +16,18 @@ InModuleScope 'PSDepend' {
     $ExistingPSModulePath = $env:PSModulePath.PSObject.Copy()
     $ExistingPath = $env:PATH.PSObject.Copy()
 
+    $Password = 'testPassword' | ConvertTo-SecureString -AsPlainText -Force
+    $TestCredential = New-Object System.Management.Automation.PSCredential('testUser', $Password)
+    $OtherCredential = New-Object System.Management.Automation.PSCredential('otherUser', $Password)
+    $Credentials = @{
+        'imaginaryCreds' = $TestCredential
+        'otherCreds' = $OtherCredential
+    }
+
     $Verbose = @{}
     if($ENV:BHBranchName -notlike "master" -or $env:BHCommitMessage -match "!verbose")
     {
-        $Verbose.add("Verbose",$True)
+        #$Verbose.add("Verbose",$True)
     }
 
     Describe "PSGalleryModule Type PS$PSVersion" {
@@ -40,6 +48,35 @@ InModuleScope 'PSDepend' {
             }
         }
 
+        Context 'Installs Modules with credentials' {
+            Mock Install-Module { Return $true }
+
+            $Results = Invoke-PSDepend @Verbose -Path "$TestDepends/psgallerymodule.withcredentials.depend.psd1" -Force -Credentials $Credentials
+
+            It 'Should execute Install-Module' {
+                Assert-MockCalled Install-Module -Times 1 -Exactly -ParameterFilter { $Credential -ne $null -and $Credential.Username -eq 'testUser' }
+            }
+
+            It 'Should Return Mocked output' {
+                $Results | Should be $True
+            }
+        }
+
+        Context 'Installs Modules with multiple credentials' {
+            Mock Install-Module { Return $true }
+
+            $Results = Invoke-PSDepend @Verbose -Path "$TestDepends/psgallerymodule.multiplecredentials.depend.psd1" -Force -Credentials $Credentials
+
+            It 'Should execute Install-Module with the correct credentials' {
+                Assert-MockCalled Install-Module -Times 1 -Exactly -ParameterFilter { $Name -eq 'imaginary' -and $Credential -ne $null -and $Credential.Username -eq 'testUser' }
+                Assert-MockCalled Install-Module -Times 1 -Exactly -ParameterFilter { $Name -eq 'other' -and $Credential -ne $null -and $Credential.Username -eq 'otherUser' }
+            }
+
+            It 'Should Return Mocked output' {
+                $Results | Should be @($True, $True)
+            }
+        }
+
         Context 'Saves Modules' {
             Mock Save-Module { Return $true }
             
@@ -47,6 +84,20 @@ InModuleScope 'PSDepend' {
 
             It 'Should execute Save-Module' {
                 Assert-MockCalled Save-Module -Times 1 -Exactly
+            }
+
+            It 'Should Return Mocked output' {
+                $Results | Should be $True
+            }
+        }
+
+        Context 'Saves Modules with credentials' {
+            Mock Save-Module { Return $true }
+
+            $Results = Invoke-PSDepend @Verbose -Path "$TestDepends/savemodule.withcredentials.depend.psd1" -Force -Credentials $Credentials
+
+            It 'Should execute Save-Module' {
+                Assert-MockCalled Save-Module -Times 1 -Exactly -ParameterFilter { $Credential -ne $null -and $Credential.Username -eq 'testUser' }
             }
 
             It 'Should Return Mocked output' {
@@ -375,7 +426,7 @@ InModuleScope 'PSDepend' {
             Mock Invoke-ExternalCommand { Return $true }
             Mock Find-NugetPackage { Return $true }
             
-            $Results = Invoke-PSDepend @Verbose -Path "$TestDepends\psgallerynuget.depend.psd1" -Force
+            $Results = Invoke-PSDepend @Verbose -Path "$TestDepends\psgallerynuget.depend.psd1" -Force -Credentials $Credentials
 
             It 'Should execute Invoke-ExternalCommand' {
                 Assert-MockCalled Invoke-ExternalCommand -Times 1 -Exactly
@@ -425,6 +476,12 @@ InModuleScope 'PSDepend' {
                 Assert-MockCalled Import-LocalizedData -Times 1 -Exactly
                 Assert-MockCalled Find-NugetPackage -Times 1 -Exactly
                 Assert-MockCalled Invoke-ExternalCommand -Times 0 -Exactly
+            }
+
+            It 'Includes credentials on lookup' {
+                Invoke-PSDepend @Verbose -Path "$TestDepends\psgallerynuget.latestversionwithcredential.depend.psd1" -Force -ErrorAction Stop -Credentials $Credentials
+
+                Assert-MockCalled Find-NugetPackage -Times 1 -Exactly  -ParameterFilter { $Credential -ne $null -and $Credential.Username -eq 'testUser' }
             }
         }
 
@@ -524,7 +581,6 @@ InModuleScope 'PSDepend' {
                 $ENV:PSModulePath = $ExistingPSModulePath
             }
         }
-
 
         Context 'AddToPath on import of module in target folder' {
 
